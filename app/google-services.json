@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "256791909987",
+    "project_id": "predictivesmartsystem",
+    "storage_bucket": "predictivesmartsystem.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:256791909987:android:c33cf2f3a63c345890ca56",
+        "android_client_info": {
+          "package_name": "com.example.smartsystem"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAYdrnaytNlIcfgl-CP5COQZtsdcl01Qe0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
