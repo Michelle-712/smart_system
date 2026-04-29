@@ -23,6 +23,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -34,13 +37,23 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.example.smartsystem.data.AuthViewModel
+import com.example.smartsystem.data.ProductViewModel
+import com.example.smartsystem.model.DailySummary
 import com.example.smartsystem.navigation.MyBottomBar
+import com.example.smartsystem.navigation.ROUTE_SELL
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(navController: NavHostController){
     val authViewModel: AuthViewModel = viewModel()
+    val productViewModel: ProductViewModel = viewModel()
+    val dailySummary = remember { mutableStateOf<DailySummary?>(null) }
+
+    LaunchedEffect(Unit) {
+        productViewModel.getDailySummary(dailySummary)
+    }
+
     Scaffold (
         topBar = { TopAppBar(
             title = { Text(
@@ -69,9 +82,15 @@ fun DashboardScreen(navController: NavHostController){
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            StatCard(title = "Today's Sales", value = "$ 0.00")
+            StatCard(
+                title = "Today's Sales",
+                value = "Ksh ${dailySummary.value?.totalSales ?: 0.0}"
+            )
             Spacer(modifier = Modifier.height(8.dp))
-            StatCard(title = "Items in Stock", value = "0")
+            StatCard(
+                title = "Items Sold Today",
+                value = "${dailySummary.value?.totalItemsSold ?: 0}"
+            )
             Spacer(modifier = Modifier.height(8.dp))
             StatCard(title = "Low Stock Items", value = "0", color = Color.Red)
 
@@ -79,16 +98,24 @@ fun DashboardScreen(navController: NavHostController){
 
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                ActionCard(title = "Sell Products", modifier = Modifier.weight(1f))
-                ActionCard(title = "Inventory", modifier = Modifier.weight(1f))
+                ActionCard(title = "Sell Products", modifier = Modifier.weight(1f)) {
+                    navController.navigate(ROUTE_SELL)
+                }
+                ActionCard(title = "Inventory", modifier = Modifier.weight(1f)) {
+                    // TODO: Navigate to Inventory
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                ActionCard(title = "Reports", modifier = Modifier.weight(1f))
-                ActionCard(title = "Prediction", modifier = Modifier.weight(1f))
+                ActionCard(title = "Reports", modifier = Modifier.weight(1f)) {
+                    // TODO: Navigate to Reports
+                }
+                ActionCard(title = "Prediction", modifier = Modifier.weight(1f)) {
+                    // TODO: Navigate to Prediction
+                }
             }
         }
     }
@@ -109,11 +136,11 @@ fun StatCard(title: String, value: String, color: Color = Color.Black) {
 }
 
 @Composable
-fun ActionCard(title: String, modifier: Modifier = Modifier) {
+fun ActionCard(title: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Card(
         modifier = modifier
             .height(120.dp)
-            .clickable { /* TODO: Navigate */ },
+            .clickable { onClick() },
         elevation = CardDefaults.cardElevation(4.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Cyan.copy(alpha = 0.2f))
     ) {

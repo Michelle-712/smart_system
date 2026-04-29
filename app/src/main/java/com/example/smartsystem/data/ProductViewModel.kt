@@ -2,15 +2,24 @@ package com.example.smartsystem.data
 
 import android.content.Context
 import android.widget.Toast
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.lifecycle.ViewModel
+import com.example.smartsystem.model.Product
 import com.example.smartsystem.model.Sale
 import com.example.smartsystem.model.SaleItem
 import com.example.smartsystem.model.StockMovement
 import com.example.smartsystem.model.StockAlert
 import com.example.smartsystem.model.StockPrediction
+import com.example.smartsystem.model.DailySummary
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ServerValue
+import com.google.firebase.database.ValueEventListener
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -19,6 +28,83 @@ class ProductViewModel : ViewModel() {
 
     private val auth = FirebaseAuth.getInstance()
     private val database = FirebaseDatabase.getInstance()
+    
+    // Temporary cart for the current sale
+    val cartItems = mutableStateListOf<SaleItem>()
+
+    fun addProduct(name: String, description: String, price: Double, quantity: Int, category: String, context: Context): String? {
+        val productRef = database.getReference("Products")
+        val productId = productRef.push().key ?: return null
+        val product = Product(productId, name, description, price, quantity, category)
+
+        productRef.child(productId).setValue(product).addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                logStockMovement(productId, quantity, "Initial Stock")
+                Toast.makeText(context, "Product added to system", Toast.LENGTH_SHORT).show()
+            }
+        }
+        return productId
+    }
+
+    fun addSampleProducts(context: Context) {
+        val samples = listOf(
+            Product("", "Milk 500ml", "Dairy product", 120.0, 42, "Dairy"),
+            Product("", "Bread loaf", "White bread", 65.0, 6, "Bakery"),
+            Product("", "Sugar 1kg", "Fine sugar", 360.0, 2, "Groceries"),
+            Product("", "Cooking oil", "Vegetable oil", 450.0, 18, "Groceries")
+        )
+        
+        samples.forEach { p ->
+            addProduct(p.name, p.description, p.price, p.quantity, p.category, context)
+        }
+    }
+
+    fun addToCart(productId: String, productName: String, quantity: Int, price: Double) {
+        val newItem = SaleItem(
+            productId = productId,
+            productName = productName,
+            quantity = quantity,
+            unitPrice = price
+        )
+        cartItems.add(newItem)
+    }
+
+    fun clearCart() {
+        cartItems.clear()
+    }
+
+    fun getProducts(products: SnapshotStateList<Product>) {
+        val productRef = database.getReference("Products")
+        productRef.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                products.clear()
+                for (snap in snapshot.children) {
+                    val product = snap.getValue(Product::class.java)
+                    if (product != null) {
+                        products.add(product)
+                    }
+                }
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        })
+    }
+
+    fun viewSales(sales: SnapshotStateList<Sale>): SnapshotStateList<Sale> {
+        val salesRef = database.getReference("Sales")
+        salesRef.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                sales.clear()
+                for (snap in snapshot.children) {
+                    val sale = snap.getValue(Sale::class.java)
+                    if (sale != null) {
+                        sales.add(sale)
+                    }
+                }
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        })
+        return sales
+    }
 
     fun addSale(
         totalAmount: Double,
@@ -52,9 +138,7 @@ class ProductViewModel : ViewModel() {
         salesRef.child(saleId).setValue(sale).addOnCompleteListener { task ->
             if (task.isSuccessful) {
                 // 2. Save Sale Items and 3. Log Stock Movement
-                var totalItemsCount = 0
                 items.forEach { item ->
-                    totalItemsCount += item.quantity
                     val itemId = saleItemsRef.push().key ?: ""
                     val itemWithIds = item.copy(itemId = itemId, saleId = saleId)
                     saleItemsRef.child(itemId).setValue(itemWithIds)
@@ -69,9 +153,10 @@ class ProductViewModel : ViewModel() {
                 }
                 
                 // 4. Update Daily Summary
-                updateDailySummary(totalAmount, totalItemsCount)
+                updateDailySummary(totalAmount, items.sumOf { it.quantity })
                 
-                Toast.makeText(context, "Sale and items recorded", Toast.LENGTH_SHORT).show()
+                clearCart()
+                Toast.makeText(context, "Checkout Successful", Toast.LENGTH_SHORT).show()
             } else {
                 Toast.makeText(context, "Error: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
             }
@@ -86,6 +171,19 @@ class ProductViewModel : ViewModel() {
         summaryRef.child("totalSales").run { setValue(ServerValue.increment(amount)) }
         summaryRef.child("totalTransactions").run { setValue(ServerValue.increment(1)) }
         summaryRef.child("totalItemsSold").run { setValue(ServerValue.increment(itemsCount.toLong())) }
+    }
+
+    fun getDailySummary(summary: MutableState<DailySummary?>) {
+        val dateKey = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        val summaryRef = database.getReference("DailySummary").child(dateKey)
+        
+        summaryRef.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val data = snapshot.getValue(DailySummary::class.java)
+                summary.value = data
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        })
     }
 
     fun logStockMovement(
@@ -109,12 +207,14 @@ class ProductViewModel : ViewModel() {
 
         stockMovementsRef.child(movementId).setValue(movement)
         
-        // After every movement, check for low stock
+        // Update product quantity in Products table
+        val productRef = database.getReference("Products").child(productId).child("quantity")
+        productRef.run { setValue(ServerValue.increment(quantity.toLong())) }
+
         checkLowStockAlert(productId)
     }
 
     private fun checkLowStockAlert(productId: String) {
-        val alertsRef = database.getReference("StockAlerts")
         // Logic to fetch stock and create alerts would go here
     }
 
