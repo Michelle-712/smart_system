@@ -2,44 +2,15 @@ package com.example.smartsystem.ui.theme.Screen.inventory
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -52,7 +23,7 @@ import androidx.navigation.NavHostController
 import com.example.smartsystem.data.ProductViewModel
 import com.example.smartsystem.model.Product
 import com.example.smartsystem.navigation.MyBottomBar
-import com.example.smartsystem.navigation.ROUTE_SELL
+import com.example.smartsystem.navigation.ROUTE_ADD_PRODUCT
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,6 +39,7 @@ fun InventoryScreen(navController: NavHostController, productViewModel: ProductV
         productViewModel.getProducts(products)
     }
 
+    // Restock Dialog for existing products
     if (showRestockDialog && selectedProduct != null) {
         AlertDialog(
             onDismissRequest = { 
@@ -134,11 +106,11 @@ fun InventoryScreen(navController: NavHostController, productViewModel: ProductV
                 .background(Color(0xFFF8F9FA))
                 .padding(16.dp)
         ) {
+            // Header Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Header text instead of search bar to maintain balance if needed, or just the buttons
                 Text(
                     text = "Stock Levels",
                     fontSize = 18.sp,
@@ -146,17 +118,8 @@ fun InventoryScreen(navController: NavHostController, productViewModel: ProductV
                     modifier = Modifier.weight(1f)
                 )
 
-                if (products.isEmpty()) {
-                    Button(
-                        onClick = { productViewModel.addSampleProducts(context) },
-                        modifier = Modifier.padding(end = 8.dp)
-                    ) {
-                        Text("Add Samples")
-                    }
-                }
-
                 IconButton(
-                    onClick = { navController.navigate(ROUTE_SELL) },
+                    onClick = { navController.navigate(ROUTE_ADD_PRODUCT) },
                     modifier = Modifier
                         .size(48.dp)
                         .background(Color(0xFFE0E0E0), RoundedCornerShape(12.dp))
@@ -167,9 +130,25 @@ fun InventoryScreen(navController: NavHostController, productViewModel: ProductV
 
             Spacer(modifier = Modifier.height(20.dp))
 
+            // Content Area
             if (products.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Inventory is empty. Click + to add products.", color = Color.Gray)
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Inventory is empty.", color = Color.Gray, fontSize = 16.sp)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(
+                            onClick = { navController.navigate(ROUTE_ADD_PRODUCT) },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.Cyan, contentColor = Color.Black),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Add Product", fontWeight = FontWeight.Bold)
+                        }
+                        
+                        // Keeping the Load Samples as an option if they still want it
+                        TextButton(onClick = { productViewModel.addSampleProducts(context) }) {
+                            Text("Or Load Sample Products", color = Color.Gray)
+                        }
+                    }
                 }
             } else {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {

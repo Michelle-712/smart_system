@@ -4,7 +4,6 @@ import android.content.Context
 import android.widget.Toast
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.lifecycle.ViewModel
 import com.example.smartsystem.model.Product
@@ -215,7 +214,65 @@ class ProductViewModel : ViewModel() {
     }
 
     private fun checkLowStockAlert(productId: String) {
-        // Logic to fetch stock and create alerts would go here
+        val productRef = database.getReference("Products").child(productId)
+        productRef.get().addOnSuccessListener { snapshot ->
+            val product = snapshot.getValue(Product::class.java) ?: return@addOnSuccessListener
+            
+            // Threshold for low stock (e.g., less than 10)
+            if (product.quantity <= 10) {
+                val alertsRef = database.getReference("StockAlerts")
+                val alertId = productId // Use productId as alertId to avoid duplicates for same product
+                
+                val severity = if (product.quantity <= 3) "Critical" else "Low"
+                
+                val alert = StockAlert(
+                    alertId = alertId,
+                    productId = productId,
+                    productName = product.name,
+                    currentStock = product.quantity,
+                    severity = severity,
+                    isResolved = false,
+                    timestamp = System.currentTimeMillis()
+                )
+                alertsRef.child(alertId).setValue(alert)
+            } else {
+                database.getReference("StockAlerts").child(productId).removeValue()
+            }
+        }
+    }
+
+    fun getAlerts(alerts: SnapshotStateList<StockAlert>) {
+        val alertsRef = database.getReference("StockAlerts")
+        alertsRef.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                alerts.clear()
+                for (snap in snapshot.children) {
+                    val alert = snap.getValue(StockAlert::class.java)
+                    if (alert != null && !alert.isResolved) {
+                        alerts.add(alert)
+                    }
+                }
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        })
+    }
+
+    fun getStockPredictions(predictions: SnapshotStateList<StockPrediction>) {
+        val prodRef = database.getReference("Products")
+        prodRef.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                predictions.clear()
+                for (snap in snapshot.children) {
+                    val p = snap.getValue(Product::class.java)
+                    if (p != null) {
+                        // Simple logic: if stock is 10 and they sell 2 a day, they have 5 days left
+                        val daysLeft = if (p.quantity > 0) (p.quantity / 2) + 1 else 0
+                        predictions.add(StockPrediction(p.productId, p.productId, 2.0, daysLeft))
+                    }
+                }
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        })
     }
 
     fun updateAlertStatus(alertId: String, isResolved: Boolean) {
