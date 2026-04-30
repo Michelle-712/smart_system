@@ -7,10 +7,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.smartsystem.data.ProductViewModel
+import com.example.smartsystem.ui.theme.Screen.alerts.AlertsScreen
 import com.example.smartsystem.ui.theme.Screen.dashboard.DashboardScreen
 import com.example.smartsystem.ui.theme.Screen.inventory.AddProductScreen
 import com.example.smartsystem.ui.theme.Screen.inventory.InventoryScreen
 import com.example.smartsystem.ui.theme.Screen.login.LoginScreen
+import com.example.smartsystem.ui.theme.Screen.reports.ReportsScreen
 import com.example.smartsystem.ui.theme.Screen.register.RegisterScreen
 import com.example.smartsystem.ui.theme.Screen.sales.SalesScreen
 import com.example.smartsystem.ui.theme.Screen.sales.SellProductScreen
@@ -35,11 +37,15 @@ fun AppNavHost(navController: NavHostController = rememberNavController(),
             SellProductScreen(navController, productViewModel) 
         }
 
-        composable(ROUTE_REPORTS) { /* TODO */ }
+        composable(ROUTE_REPORTS) { 
+            ReportsScreen(navController, productViewModel) 
+        }
         composable(ROUTE_STOCK) { 
             InventoryScreen(navController, productViewModel) 
         }
-        composable(ROUTE_ALERTS) { /* TODO */ }
+        composable(ROUTE_ALERTS) { 
+            AlertsScreen(navController, productViewModel) 
+        }
         
         composable(ROUTE_ADD_PRODUCT) {
             AddProductScreen(navController, productViewModel)

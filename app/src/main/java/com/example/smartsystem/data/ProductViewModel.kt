@@ -267,7 +267,7 @@ class ProductViewModel : ViewModel() {
                     if (p != null) {
                         // Simple logic: if stock is 10 and they sell 2 a day, they have 5 days left
                         val daysLeft = if (p.quantity > 0) (p.quantity / 2) + 1 else 0
-                        predictions.add(StockPrediction(p.productId, p.productId, 2.0, daysLeft))
+                        predictions.add(StockPrediction(p.productId, p.productId, p.name, 2.0, daysLeft))
                     }
                 }
             }
@@ -279,11 +279,12 @@ class ProductViewModel : ViewModel() {
         database.getReference("StockAlerts").child(alertId).child("resolved").setValue(isResolved)
     }
 
-    fun savePrediction(productId: String, avgSales: Double, daysLeft: Int) {
+    fun savePrediction(productId: String, productName: String, avgSales: Double, daysLeft: Int) {
         val predictionRef = database.getReference("StockPredictions")
         val prediction = StockPrediction(
             predictionId = productId,
             productId = productId,
+            productName = productName,
             averageDailySales = avgSales,
             daysRemaining = daysLeft
         )
