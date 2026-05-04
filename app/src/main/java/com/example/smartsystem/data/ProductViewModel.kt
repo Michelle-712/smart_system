@@ -31,18 +31,49 @@ class ProductViewModel : ViewModel() {
     // Temporary cart for the current sale
     val cartItems = mutableStateListOf<SaleItem>()
 
-    fun addProduct(name: String, description: String, price: Double, quantity: Int, category: String, context: Context): String? {
+    fun addProduct(
+        name: String,
+        description: String,
+        price: Double,
+        quantity: Int,
+        category: String,
+        context: Context,
+        onComplete: (String?) -> Unit = {}
+    ) {
         val productRef = database.getReference("Products")
-        val productId = productRef.push().key ?: return null
-        val product = Product(productId, name, description, price, quantity, category)
 
-        productRef.child(productId).setValue(product).addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                logStockMovement(productId, quantity, "Initial Stock")
-                Toast.makeText(context, "Product added to system", Toast.LENGTH_SHORT).show()
+        // Query to check if product with same name exists
+        productRef.orderByChild("name").equalTo(name).addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                if (snapshot.exists()) {
+                    // Product exists, update its quantity (Restock)
+                    val existingProductSnap = snapshot.children.first()
+                    val productId = existingProductSnap.key ?: ""
+                    
+                    logStockMovement(productId, quantity, "Restock")
+                    Toast.makeText(context, "Inventory updated for $name", Toast.LENGTH_SHORT).show()
+                    onComplete(productId)
+                } else {
+                    // Product does not exist, create new
+                    val productId = productRef.push().key ?: ""
+                    val product = Product(productId, name, description, price, quantity, category)
+
+                    productRef.child(productId).setValue(product).addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+                            logStockMovement(productId, quantity, "Initial Stock")
+                            Toast.makeText(context, "Product added to system", Toast.LENGTH_SHORT).show()
+                            onComplete(productId)
+                        } else {
+                            onComplete(null)
+                        }
+                    }
+                }
             }
-        }
-        return productId
+
+            override fun onCancelled(error: DatabaseError) {
+                onComplete(null)
+            }
+        })
     }
 
     fun addSampleProducts(context: Context) {
@@ -143,6 +174,7 @@ class ProductViewModel : ViewModel() {
                     saleItemsRef.child(itemId).setValue(itemWithIds)
 
                     // Log stock reduction for the sale
+                    // This deducts from inventory by passing a negative quantity
                     logStockMovement(
                         productId = item.productId,
                         quantity = -item.quantity,
@@ -207,6 +239,7 @@ class ProductViewModel : ViewModel() {
         stockMovementsRef.child(movementId).setValue(movement)
         
         // Update product quantity in Products table
+        // This handles both adding (positive qty) and deducting (negative qty)
         val productRef = database.getReference("Products").child(productId).child("quantity")
         productRef.run { setValue(ServerValue.increment(quantity.toLong())) }
 

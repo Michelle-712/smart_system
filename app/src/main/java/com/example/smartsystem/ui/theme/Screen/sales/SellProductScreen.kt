@@ -97,26 +97,27 @@ fun SellProductScreen(navController: NavHostController, productViewModel: Produc
                         val qtyInt = quantity.toIntOrNull() ?: 0
                         val priceDouble = price.toDoubleOrNull() ?: 0.0
                         
-                        // 1. Save to "Products" database and get ID
-                        val productId = productViewModel.addProduct(
+                        // 1. Save to "Products" database and get ID using callback
+                        productViewModel.addProduct(
                             name = name,
                             description = "Sold via Quick Sell",
                             price = priceDouble,
                             quantity = qtyInt,
                             category = "General",
-                            context = context
+                            context = context,
+                            onComplete = { productId ->
+                                // 2. Add to cart so it appears in "New Sale" screen
+                                if (productId != null) {
+                                    productViewModel.addToCart(
+                                        productId = productId,
+                                        productName = name,
+                                        quantity = qtyInt,
+                                        price = priceDouble
+                                    )
+                                    navController.navigate(ROUTE_SALES)
+                                }
+                            }
                         )
-                        
-                        // 2. Add to cart so it appears in "New Sale" screen
-                        if (productId != null) {
-                            productViewModel.addToCart(
-                                productId = productId,
-                                productName = name,
-                                quantity = qtyInt,
-                                price = priceDouble
-                            )
-                            navController.navigate(ROUTE_SALES)
-                        }
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),

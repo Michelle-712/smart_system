@@ -74,7 +74,7 @@ fun PredictionItem(pred: StockPrediction) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(pred.productId, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(pred.productName, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 Text(
                     "${pred.daysRemaining} days left",
                     color = color,

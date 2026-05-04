@@ -72,7 +72,7 @@ fun RegisterScreen(navController: NavController){
         verticalArrangement = Arrangement.Center
     ) {
         Image(
-            painter = painterResource(id = R.drawable.ic_launcher_foreground),
+            painter = painterResource(id = R.drawable.logo),
             contentDescription = "logo",
             modifier = Modifier
                 .size(150.dp)
