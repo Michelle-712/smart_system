@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.smartsystem.data.ProductViewModel
+import com.example.smartsystem.model.StockAlert
 import com.example.smartsystem.model.StockPrediction
 import com.example.smartsystem.navigation.MyBottomBar
 
@@ -22,15 +23,17 @@ import com.example.smartsystem.navigation.MyBottomBar
 @Composable
 fun AlertsScreen(navController: NavHostController, productViewModel: ProductViewModel) {
     val predictions = remember { mutableStateListOf<StockPrediction>() }
+    val alerts = remember { mutableStateListOf<StockAlert>() }
 
     LaunchedEffect(Unit) {
         productViewModel.getStockPredictions(predictions)
+        productViewModel.getAlerts(alerts)
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Stock predictions", fontSize = 24.sp, fontWeight = FontWeight.Bold) },
+                title = { Text("Stock Alerts & Predictions", fontSize = 22.sp, fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
             )
         },
@@ -44,10 +47,65 @@ fun AlertsScreen(navController: NavHostController, productViewModel: ProductView
                 .padding(16.dp)
         ) {
             LazyColumn {
+                if (alerts.isNotEmpty()) {
+                    item {
+                        Text("Immediate Attention", fontWeight = FontWeight.Bold, color = Color.Gray)
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                    items(alerts) { alert ->
+                        StockAlertItem(alert)
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
+                    item { Spacer(modifier = Modifier.height(16.dp)) }
+                }
+
+                item {
+                    Text("Inventory Run-out Predictions", fontWeight = FontWeight.Bold, color = Color.Gray)
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
                 items(predictions) { pred ->
                     PredictionItem(pred)
                     Spacer(modifier = Modifier.height(16.dp))
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun StockAlertItem(alert: StockAlert) {
+    val color = if (alert.severity == "Critical") Color(0xFFD32F2F) else Color(0xFFEF6C00)
+    
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(2.dp),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column {
+                Text(alert.productName, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(
+                    text = "${alert.severity.uppercase()} STOCK",
+                    color = color,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Surface(
+                color = color.copy(alpha = 0.1f),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text(
+                    text = "${alert.currentStock} left",
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                    color = color,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }
@@ -84,12 +142,13 @@ fun PredictionItem(pred: StockPrediction) {
             }
             Spacer(modifier = Modifier.height(12.dp))
             LinearProgressIndicator(
-                progress = progress,
+                progress = { progress },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(8.dp),
                 color = color,
-                trackColor = Color(0xFFE0E0E0)
+                trackColor = Color(0xFFE0E0E0),
+                strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
             )
         }
     }

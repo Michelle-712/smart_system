@@ -31,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.example.smartsystem.data.ProductViewModel
 import com.example.smartsystem.navigation.ROUTE_SALES
@@ -97,7 +98,7 @@ fun SellProductScreen(navController: NavHostController, productViewModel: Produc
                         val qtyInt = quantity.toIntOrNull() ?: 0
                         val priceDouble = price.toDoubleOrNull() ?: 0.0
                         
-                        // 1. Save to "Products" database and get ID using callback
+                        // 1. Find product ID (without restocking it)
                         productViewModel.addProduct(
                             name = name,
                             description = "Sold via Quick Sell",
@@ -105,6 +106,7 @@ fun SellProductScreen(navController: NavHostController, productViewModel: Produc
                             quantity = qtyInt,
                             category = "General",
                             context = context,
+                            isRestock = false, // DO NOT restock when selling
                             onComplete = { productId ->
                                 // 2. Add to cart so it appears in "New Sale" screen
                                 if (productId != null) {

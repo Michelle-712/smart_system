@@ -38,6 +38,7 @@ class ProductViewModel : ViewModel() {
         quantity: Int,
         category: String,
         context: Context,
+        isRestock: Boolean = true,
         onComplete: (String?) -> Unit = {}
     ) {
         val productRef = database.getReference("Products")
@@ -46,12 +47,14 @@ class ProductViewModel : ViewModel() {
         productRef.orderByChild("name").equalTo(name).addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 if (snapshot.exists()) {
-                    // Product exists, update its quantity (Restock)
+                    // Product exists, update its quantity only if it's a Restock action
                     val existingProductSnap = snapshot.children.first()
                     val productId = existingProductSnap.key ?: ""
                     
-                    logStockMovement(productId, quantity, "Restock")
-                    Toast.makeText(context, "Inventory updated for $name", Toast.LENGTH_SHORT).show()
+                    if (isRestock) {
+                        logStockMovement(productId, quantity, "Restock", context = context)
+                        Toast.makeText(context, "Inventory updated for $name", Toast.LENGTH_SHORT).show()
+                    }
                     onComplete(productId)
                 } else {
                     // Product does not exist, create new
@@ -60,7 +63,7 @@ class ProductViewModel : ViewModel() {
 
                     productRef.child(productId).setValue(product).addOnCompleteListener { task ->
                         if (task.isSuccessful) {
-                            logStockMovement(productId, quantity, "Initial Stock")
+                            logStockMovement(productId, quantity, "Initial Stock", context = context)
                             Toast.makeText(context, "Product added to system", Toast.LENGTH_SHORT).show()
                             onComplete(productId)
                         } else {
@@ -179,7 +182,8 @@ class ProductViewModel : ViewModel() {
                         productId = item.productId,
                         quantity = -item.quantity,
                         type = "Sale",
-                        userId = userId
+                        userId = userId,
+                        context = context
                     )
                 }
                 
@@ -221,7 +225,8 @@ class ProductViewModel : ViewModel() {
         productId: String,
         quantity: Int,
         type: String,
-        userId: String? = null
+        userId: String? = null,
+        context: Context? = null
     ) {
         val currentUserId = userId ?: auth.currentUser?.uid ?: "System"
         val stockMovementsRef = database.getReference("StockMovements")
@@ -241,28 +246,51 @@ class ProductViewModel : ViewModel() {
         // Update product quantity in Products table
         // This handles both adding (positive qty) and deducting (negative qty)
         val productRef = database.getReference("Products").child(productId).child("quantity")
-        productRef.run { setValue(ServerValue.increment(quantity.toLong())) }
-
-        checkLowStockAlert(productId)
+        productRef.run { setValue(ServerValue.increment(quantity.toLong())).addOnCompleteListener {
+            // After stock is updated, check for low stock levels and notify user
+            checkLowStockAlert(productId, context)
+        } }
     }
 
-    private fun checkLowStockAlert(productId: String) {
+    private fun checkLowStockAlert(productId: String, context: Context? = null) {
         val productRef = database.getReference("Products").child(productId)
         productRef.get().addOnSuccessListener { snapshot ->
             val product = snapshot.getValue(Product::class.java) ?: return@addOnSuccessListener
             
-            // Threshold for low stock (e.g., less than 10)
-            if (product.quantity <= 10) {
+            val stockLevel = product.quantity
+            val status: String
+            val severity: String?
+
+            when {
+                stockLevel <= 3 -> {
+                    status = "CRITICAL"
+                    severity = "Critical"
+                }
+                stockLevel <= 10 -> {
+                    status = "LOW"
+                    severity = "Low"
+                }
+                else -> {
+                    status = "OK"
+                    severity = null
+                }
+            }
+
+            // Pop out alert if context is provided
+            context?.let {
+                val message = "${product.name} stock is $status ($stockLevel remaining)"
+                Toast.makeText(it, message, Toast.LENGTH_LONG).show()
+            }
+
+            if (severity != null) {
                 val alertsRef = database.getReference("StockAlerts")
                 val alertId = productId // Use productId as alertId to avoid duplicates for same product
-                
-                val severity = if (product.quantity <= 3) "Critical" else "Low"
                 
                 val alert = StockAlert(
                     alertId = alertId,
                     productId = productId,
                     productName = product.name,
-                    currentStock = product.quantity,
+                    currentStock = stockLevel,
                     severity = severity,
                     isResolved = false,
                     timestamp = System.currentTimeMillis()
@@ -325,7 +353,7 @@ class ProductViewModel : ViewModel() {
     }
 
     fun restockProduct(productId: String, quantity: Int, context: Context) {
-        logStockMovement(productId, quantity, "Restock")
+        logStockMovement(productId, quantity, "Restock", context = context)
         Toast.makeText(context, "Restock recorded", Toast.LENGTH_SHORT).show()
     }
 }

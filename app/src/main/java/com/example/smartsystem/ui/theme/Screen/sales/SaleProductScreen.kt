@@ -99,7 +99,7 @@ fun SaleProductScreen(navController: NavHostController) {
                         val qtyInt = quantity.toIntOrNull() ?: 0
                         val priceDouble = price.toDoubleOrNull() ?: 0.0
 
-                        // 1. Save to "Products" database and use callback to get the productId
+                        // 1. Get the product (do not increase its quantity if it exists)
                         productViewModel.addProduct(
                             name = name,
                             description = "Sold via Quick Sale",
@@ -107,6 +107,7 @@ fun SaleProductScreen(navController: NavHostController) {
                             quantity = qtyInt,
                             category = "General",
                             context = context,
+                            isRestock = false, // Set to false so we don't add to stock before selling
                             onComplete = { productId ->
                                 // 2. Add to cart so it appears in "New Sale" screen
                                 if (productId != null) {
