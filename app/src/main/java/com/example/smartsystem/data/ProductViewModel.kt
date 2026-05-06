@@ -79,6 +79,39 @@ class ProductViewModel : ViewModel() {
         })
     }
 
+    fun updateProduct(
+        productId: String,
+        name: String,
+        description: String,
+        price: Double,
+        quantity: Int,
+        category: String,
+        context: Context
+    ) {
+        val productRef = database.getReference("Products").child(productId)
+        val product = Product(productId, name, description, price, quantity, category)
+        
+        productRef.setValue(product).addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                Toast.makeText(context, "Product updated successfully", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(context, "Update failed: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    fun deleteProduct(productId: String, context: Context) {
+        database.getReference("Products").child(productId).removeValue().addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                // Also remove associated alerts
+                database.getReference("StockAlerts").child(productId).removeValue()
+                Toast.makeText(context, "Product deleted", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(context, "Delete failed", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     fun addSampleProducts(context: Context) {
         val samples = listOf(
             Product("", "Milk 500ml", "Dairy product", 120.0, 42, "Dairy"),
@@ -100,6 +133,10 @@ class ProductViewModel : ViewModel() {
             unitPrice = price
         )
         cartItems.add(newItem)
+    }
+
+    fun removeFromCart(item: SaleItem) {
+        cartItems.remove(item)
     }
 
     fun clearCart() {

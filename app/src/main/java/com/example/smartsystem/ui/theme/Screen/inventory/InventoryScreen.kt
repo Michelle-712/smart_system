@@ -24,6 +24,7 @@ import com.example.smartsystem.data.ProductViewModel
 import com.example.smartsystem.model.Product
 import com.example.smartsystem.navigation.MyBottomBar
 import com.example.smartsystem.navigation.ROUTE_ADD_PRODUCT
+import com.example.smartsystem.navigation.ROUTE_EDIT_PRODUCT
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -144,7 +145,6 @@ fun InventoryScreen(navController: NavHostController, productViewModel: ProductV
                             Text("Add Product", fontWeight = FontWeight.Bold)
                         }
                         
-                        // Keeping the Load Samples as an option if they still want it
                         TextButton(onClick = { productViewModel.addSampleProducts(context) }) {
                             Text("Or Load Sample Products", color = Color.Gray)
                         }
@@ -153,10 +153,19 @@ fun InventoryScreen(navController: NavHostController, productViewModel: ProductV
             } else {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     items(products) { product ->
-                        InventoryItemCard(product) {
-                            selectedProduct = product
-                            showRestockDialog = true
-                        }
+                        InventoryItemCard(
+                            product = product,
+                            onRestock = {
+                                selectedProduct = product
+                                showRestockDialog = true
+                            },
+                            onEdit = {
+                                navController.navigate(ROUTE_EDIT_PRODUCT + "/${product.productId}")
+                            },
+                            onDelete = {
+                                productViewModel.deleteProduct(product.productId, context)
+                            }
+                        )
                         Spacer(modifier = Modifier.height(10.dp))
                     }
                 }
@@ -166,7 +175,7 @@ fun InventoryScreen(navController: NavHostController, productViewModel: ProductV
 }
 
 @Composable
-fun InventoryItemCard(product: Product, onClick: () -> Unit) {
+fun InventoryItemCard(product: Product, onRestock: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
     val (status, statusBg, statusText) = when {
         product.quantity <= 2 -> Triple("Critical", Color(0xFFFFEBEE), Color(0xFFD32F2F))
         product.quantity <= 6 -> Triple("Low", Color(0xFFFFF3E0), Color(0xFFEF6C00))
@@ -176,42 +185,80 @@ fun InventoryItemCard(product: Product, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() },
+            .clickable { onRestock() },
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(2.dp),
         shape = RoundedCornerShape(16.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = product.name,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                    Text(
+                        text = "${product.quantity} units",
+                        fontSize = 14.sp,
+                        color = Color.Gray
+                    )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Surface(
+                        color = statusBg,
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            text = status,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                            color = statusText,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+                }
+                
                 Text(
-                    text = product.name,
-                    fontSize = 17.sp,
+                    text = "Ksh ${product.price}",
+                    fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.Black
-                )
-                Text(
-                    text = "${product.quantity} units",
-                    fontSize = 14.sp,
-                    color = Color.Gray
+                    color = Color(0xFF2E86C1)
                 )
             }
             
-            Surface(
-                color = statusBg,
-                shape = RoundedCornerShape(8.dp)
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
             ) {
-                Text(
-                    text = status,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                    color = statusText,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.ExtraBold
-                )
+                Button(
+                    onClick = onEdit,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Blue),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    Text("Edit", color = Color.White, fontSize = 14.sp)
+                }
+                
+                Spacer(modifier = Modifier.width(8.dp))
+                
+                Button(
+                    onClick = onDelete,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    Text("Delete", color = Color.White, fontSize = 14.sp)
+                }
             }
         }
     }

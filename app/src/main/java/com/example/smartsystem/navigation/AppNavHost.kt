@@ -11,20 +11,23 @@ import com.example.smartsystem.ui.theme.Screen.alerts.AlertsScreen
 import com.example.smartsystem.ui.theme.Screen.dashboard.DashboardScreen
 import com.example.smartsystem.ui.theme.Screen.inventory.AddProductScreen
 import com.example.smartsystem.ui.theme.Screen.inventory.InventoryScreen
+import com.example.smartsystem.ui.theme.Screen.inventory.EditProductScreen
 import com.example.smartsystem.ui.theme.Screen.login.LoginScreen
 import com.example.smartsystem.ui.theme.Screen.reports.ReportsScreen
 import com.example.smartsystem.ui.theme.Screen.register.RegisterScreen
 import com.example.smartsystem.ui.theme.Screen.sales.SalesScreen
 import com.example.smartsystem.ui.theme.Screen.sales.SellProductScreen
+import com.example.smartsystem.ui.theme.Screen.splash.SplashScreen
 
 @Composable
 fun AppNavHost(navController: NavHostController = rememberNavController(),
-               startDestination: String = ROUTE_LOGIN) {
+               startDestination: String = ROUTE_SPLASH) {
 
     // Instantiate the ViewModel here so it's shared across all destinations in this NavHost
     val productViewModel: ProductViewModel = viewModel()
 
     NavHost(navController = navController, startDestination = startDestination) {
+        composable(ROUTE_SPLASH) { SplashScreen(navController) }
         composable(ROUTE_REGISTER) { RegisterScreen(navController) }
         composable(ROUTE_LOGIN) { LoginScreen(navController) }
         composable(ROUTE_DASHBOARD) { DashboardScreen(navController) }
@@ -49,6 +52,11 @@ fun AppNavHost(navController: NavHostController = rememberNavController(),
         
         composable(ROUTE_ADD_PRODUCT) {
             AddProductScreen(navController, productViewModel)
+        }
+
+        composable(ROUTE_EDIT_PRODUCT + "/{productId}") { backStackEntry ->
+            val productId = backStackEntry.arguments?.getString("productId") ?: ""
+            EditProductScreen(navController, productViewModel, productId)
         }
     }
 }

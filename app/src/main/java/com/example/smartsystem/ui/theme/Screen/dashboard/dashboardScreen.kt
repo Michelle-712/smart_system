@@ -1,31 +1,13 @@
 package com.example.smartsystem.ui.theme.Screen.dashboard
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -39,9 +21,8 @@ import androidx.navigation.compose.rememberNavController
 import com.example.smartsystem.data.AuthViewModel
 import com.example.smartsystem.data.ProductViewModel
 import com.example.smartsystem.model.DailySummary
-import com.example.smartsystem.navigation.MyBottomBar
-import com.example.smartsystem.navigation.ROUTE_SELL
-
+import com.example.smartsystem.model.Product
+import com.example.smartsystem.navigation.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,10 +30,14 @@ fun DashboardScreen(navController: NavHostController){
     val authViewModel: AuthViewModel = viewModel()
     val productViewModel: ProductViewModel = viewModel()
     val dailySummary = remember { mutableStateOf<DailySummary?>(null) }
+    val products = remember { mutableStateListOf<Product>() }
 
     LaunchedEffect(Unit) {
         productViewModel.getDailySummary(dailySummary)
+        productViewModel.getProducts(products)
     }
+
+    val lowStockCount = products.count { it.quantity <= 10 }
 
     Scaffold (
         topBar = { TopAppBar(
@@ -92,29 +77,31 @@ fun DashboardScreen(navController: NavHostController){
                 value = "${dailySummary.value?.totalItemsSold ?: 0}"
             )
             Spacer(modifier = Modifier.height(8.dp))
-            StatCard(title = "Low Stock Items", value = "0", color = Color.Red)
+            StatCard(
+                title = "Low Stock Items", 
+                value = "$lowStockCount", 
+                color = if (lowStockCount > 0) Color.Red else Color.Black
+            )
 
             Spacer(modifier = Modifier.height(24.dp))
-
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 ActionCard(title = "Sell Products", modifier = Modifier.weight(1f)) {
                     navController.navigate(ROUTE_SELL)
                 }
                 ActionCard(title = "Inventory", modifier = Modifier.weight(1f)) {
-                    // TODO: Navigate to Inventory
+                    navController.navigate(ROUTE_STOCK)
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 ActionCard(title = "Reports", modifier = Modifier.weight(1f)) {
-                    // TODO: Navigate to Reports
+                    navController.navigate(ROUTE_REPORTS)
                 }
                 ActionCard(title = "Prediction", modifier = Modifier.weight(1f)) {
-                    // TODO: Navigate to Prediction
+                    navController.navigate(ROUTE_ALERTS)
                 }
             }
         }
