@@ -46,7 +46,7 @@ fun SplashScreen(navController: NavHostController) {
             Spacer(modifier = Modifier.height(16.dp))
             
             Text(
-                text = "SmartPOS System",
+                text = "PredictiveStock System",
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.Black
